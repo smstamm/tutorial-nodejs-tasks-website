@@ -6,16 +6,35 @@ const auth = require('../middleware/auth');
 
 
 router.get('/tasks', auth, async (req, res) => {
+  const match = {};
+  const sort = {};
+
+  if (req.query.complete) {
+    match.complete = req.query.complete === 'true';
+  }
+
+  if (req.query.sortBy) {
+    const parts = req.query.sortBy.split(':');
+    sort[parts[0]] = parts[1] === 'asc' ? 1 : -1;
+  }
+
   try {
     // You have to know that userId is ownerId
-    const ownerId = req.user._id;
-    const tasks = await Task.find({ owner: ownerId });
-    res.send(tasks);
+    // const ownerId = req.user._id;
+    // const tasks = await Task.find({ owner: ownerId });
+    // res.send(tasks);
 
     // Using "populate" method
-    // const user = await User.findById({ _id: req.user._id });
-    // await req.user.populate('tasks').execPopulate();
-    // res.send(req.user.tasks);
+    await req.user.populate({
+      path: 'tasks',
+      match,
+      options: {
+        limit: parseInt(req.query.limit),
+        skip: parseInt(req.query.skip),
+        sort
+      }
+    }).execPopulate();
+    res.send(req.user.tasks);
 
   } catch (error) {
     res.status(500).send(error);
